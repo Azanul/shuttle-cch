@@ -8,7 +8,8 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
         cfg
         .service(index).service(error)
         .service(cubebits)
-        .service(strength_sum).service(winner_summaries);
+        .service(strength_sum).service(winner_summaries)
+        .service(elf_count);
     };
 
     Ok(config.into())
@@ -98,4 +99,13 @@ async fn winner_summaries(reindeers: web::Json<Vec<Reindeer>>) -> HttpResponse {
     };
 
     HttpResponse::Ok().json(summary)
+}
+
+use serde_json::json;
+
+#[get("/6")]
+async fn elf_count(input_str:String) -> HttpResponse {
+    HttpResponse::Ok().json(json!({
+        "elf": input_str.matches("elf").count()
+    }))
 }
