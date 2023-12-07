@@ -29,3 +29,17 @@ async fn cubebits(path: web::Path<(u32, String)>) -> HttpResponse {
                             .fold(0, |xor, x| xor ^ x);
     HttpResponse::Ok().body((num1 ^ num2).pow(3).to_string())
 }
+
+
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+struct Reindeer {
+    name: String,
+    strength: u32,
+}
+
+#[get("/4/strength")]
+async fn strength_sum(reindeers: web::Json<Vec<Reindeer>>) -> HttpResponse {
+    HttpResponse::Ok().body(reindeers.iter().map(|x| x.strength).sum::<u32>().to_string())
+}
