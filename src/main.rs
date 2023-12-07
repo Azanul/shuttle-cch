@@ -105,7 +105,10 @@ use serde_json::json;
 
 #[get("/6")]
 async fn elf_count(input_str:String) -> HttpResponse {
+    let n_elves_on_shelves = input_str.matches("elf on a shelf").count();
     HttpResponse::Ok().json(json!({
-        "elf": input_str.matches("elf").count()
+        "elf": input_str.matches("elf").count(),
+        "elf on a shelf": n_elves_on_shelves,
+        "shelf with no elf on it": input_str.matches("shelf").count() - n_elves_on_shelves
     }))
 }
