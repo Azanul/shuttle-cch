@@ -107,7 +107,7 @@ async fn winner_summaries(reindeers: web::Json<Vec<Reindeer>>) -> HttpResponse {
 
 use serde_json::json;
 
-#[get("/6")]
+#[post("/6")]
 async fn elf_count(input_str:String) -> HttpResponse {
     let n_elves_on_shelves = input_str.matches("elf on a shelf").count();
     HttpResponse::Ok().json(json!({
