@@ -1,4 +1,4 @@
-use actix_web::{get, web, web::ServiceConfig,  HttpResponse};
+use actix_web::{get, web, web::ServiceConfig,  HttpRequest, HttpResponse, Result};
 
 use shuttle_actix_web::ShuttleActixWeb;
 
@@ -9,7 +9,8 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
         .service(index).service(error)
         .service(cubebits)
         .service(strength_sum).service(winner_summaries)
-        .service(elf_count);
+        .service(elf_count)
+        .service(decode_cookie);
     };
 
     Ok(config.into())
@@ -111,4 +112,17 @@ async fn elf_count(input_str:String) -> HttpResponse {
         "elf on a shelf": n_elves_on_shelves,
         "shelf with no elf on it": input_str.matches("shelf").count() - n_elves_on_shelves
     }))
+}
+
+use data_encoding::BASE64;
+use serde_json::Value;
+
+#[derive(Debug, Serialize)]
+struct CookieRecipe(Value);
+
+#[get("/7/decode")]
+async fn decode_cookie(req: HttpRequest) -> HttpResponse {
+    let cookie = req.headers().get("Cookie").unwrap().to_str().unwrap().get(7..).unwrap();
+    println!("{:?}", cookie);
+    HttpResponse::Ok().json(String::from_utf8(BASE64.decode(cookie.as_bytes()).unwrap()).unwrap())
 }
