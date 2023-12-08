@@ -1,4 +1,4 @@
-use actix_web::{get, web, web::ServiceConfig,  HttpRequest, HttpResponse, Result};
+use actix_web::{get, post, web, web::ServiceConfig,  HttpRequest, HttpResponse, Result};
 
 use shuttle_actix_web::ShuttleActixWeb;
 
@@ -28,7 +28,6 @@ async fn error() -> HttpResponse {
 
 #[get(r"/1{num1220:(\/(\d)+)+}")]
 async fn cubebits(path: web::Path<String>) -> HttpResponse {
-    println!("{path}");
     let num1220 = path.into_inner();
     let num = num1220.split('/')
                             .map(|x| match x.parse::<u32>() {
@@ -46,16 +45,16 @@ use serde::{Serialize, Deserialize, Serializer, ser::SerializeStruct};
 struct Reindeer {
     name: String,
     strength: u32,
-    speed: f32,
-    height: u32,
-    antler_width: u32,
-    snow_magic_power: u32,
-    favorite_food: String,
+    speed: Option<f32>,
+    height: Option<u32>,
+    antler_width: Option<u32>,
+    snow_magic_power: Option<u32>,
+    favorite_food: Option<String>,
     #[serde(rename = "cAnD13s_3ATeN-yesT3rdAy")]
-    candies_eaten_yesterday: u32,
+    candies_eaten_yesterday: Option<u32>,
 }
 
-#[get("/4/strength")]
+#[post("/4/strength")]
 async fn strength_sum(reindeers: web::Json<Vec<Reindeer>>) -> HttpResponse {
     HttpResponse::Ok().body(reindeers.iter().map(|x| x.strength).sum::<u32>().to_string())
 }
@@ -79,25 +78,25 @@ impl Serialize for ReindeerContestSummary {
         }
 
         if let Some(tallest) = &self.tallest {
-            state.serialize_field("tallest", &format!("{} is standing tall with his {} cm wide antlers", tallest.name, tallest.antler_width))?;
+            state.serialize_field("tallest", &format!("{} is standing tall with his {} cm wide antlers", tallest.name, tallest.antler_width.unwrap()))?;
         }
 
         if let Some(magician) = &self.magician {
-            state.serialize_field("magician", &format!("{} could blast you away with a snow magic power of {}", magician.name, magician.snow_magic_power))?;
+            state.serialize_field("magician", &format!("{} could blast you away with a snow magic power of {}", magician.name, magician.snow_magic_power.unwrap()))?;
         }
 
         if let Some(consumer) = &self.consumer {
-            state.serialize_field("consumer", &format!("{} ate lots of candies, but also some {}", consumer.name, consumer.favorite_food))?;
+            state.serialize_field("consumer", &format!("{} ate lots of candies, but also some {}", consumer.name, consumer.favorite_food.as_ref().unwrap()))?;
         }
 
         state.end()
     }
 }
 
-#[get("/4/contest")]
+#[post("/4/contest")]
 async fn winner_summaries(reindeers: web::Json<Vec<Reindeer>>) -> HttpResponse {
     let summary = ReindeerContestSummary{
-        fastest: reindeers.iter().max_by_key(|r| r.speed.to_bits()).cloned(),
+        fastest: reindeers.iter().max_by_key(|r| r.speed.unwrap().to_bits()).cloned(),
         tallest: reindeers.iter().max_by_key(|r| r.height).cloned(),
         magician: reindeers.iter().max_by_key(|r| r.snow_magic_power).cloned(),
         consumer: reindeers.iter().max_by_key(|r| r.strength).cloned(),
