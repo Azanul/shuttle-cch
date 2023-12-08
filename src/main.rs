@@ -26,13 +26,17 @@ async fn error() -> HttpResponse {
     HttpResponse::InternalServerError().finish()
 }
 
-#[get("/1/{num1}/{num2220}")]
-async fn cubebits(path: web::Path<(u32, String)>) -> HttpResponse {
-    let (num1, num2220) = path.into_inner();
-    let num2 = num2220.split('/')
-                            .map(|x|x.parse::<u32>().unwrap())
+#[get(r"/1{num1220:(\/(\d)+)+}")]
+async fn cubebits(path: web::Path<String>) -> HttpResponse {
+    println!("{path}");
+    let num1220 = path.into_inner();
+    let num = num1220.split('/')
+                            .map(|x| match x.parse::<u32>() {
+                                Ok(x) => x,
+                                Err(_) => 0
+                            })
                             .fold(0, |xor, x| xor ^ x);
-    HttpResponse::Ok().body((num1 ^ num2).pow(3).to_string())
+    HttpResponse::Ok().body(num.pow(3).to_string())
 }
 
 
