@@ -100,7 +100,7 @@ async fn winner_summaries(reindeers: web::Json<Vec<Reindeer>>) -> HttpResponse {
         fastest: reindeers.iter().max_by(|a, b| a.speed.unwrap().total_cmp(&b.speed.unwrap())).cloned(),
         tallest: reindeers.iter().max_by_key(|r| r.height).cloned(),
         magician: reindeers.iter().max_by_key(|r| r.snow_magic_power).cloned(),
-        consumer: reindeers.iter().max_by_key(|r| r.strength).cloned(),
+        consumer: reindeers.iter().max_by_key(|r| r.candies_eaten_yesterday).cloned(),
     };
 
     HttpResponse::Ok().json(summary)
