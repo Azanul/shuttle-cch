@@ -1,4 +1,4 @@
-use actix_web::{get, post, web, web::ServiceConfig,  HttpRequest, HttpResponse, Result};
+use actix_web::{get, post, web, web::ServiceConfig,  HttpRequest, HttpResponse, Result, FromRequest};
 
 use shuttle_actix_web::ShuttleActixWeb;
 
@@ -10,7 +10,7 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
         .service(cubebits)
         .service(strength_sum).service(winner_summaries)
         .service(elf_count)
-        .service(decode_cookie);
+        .service(decode_cookie).service(bake_cookies);
     };
 
     Ok(config.into())
@@ -119,12 +119,57 @@ async fn elf_count(input_str:String) -> HttpResponse {
 
 use data_encoding::BASE64;
 use serde_json::Value;
+use actix_utils::future::{ok, Ready};
 
 #[derive(Debug, Serialize)]
 struct CookieRecipe(Value);
 
+impl FromRequest for CookieRecipe {
+    type Error = actix_web::Error;
+    type Future = Ready<Result<Self, Self::Error>>;
+
+    fn from_request(req: &HttpRequest, _: &mut actix_web::dev::Payload) -> Self::Future {
+        let cookie = req.headers().get("Cookie").unwrap().to_str().unwrap().get(7..).unwrap();
+        ok(CookieRecipe(serde_json::from_str::<serde_json::Value>(&String::from_utf8(BASE64.decode(cookie.as_bytes()).unwrap()).unwrap()).unwrap()))
+    }
+}
+
 #[get("/7/decode")]
-async fn decode_cookie(req: HttpRequest) -> HttpResponse {
-    let cookie = req.headers().get("Cookie").unwrap().to_str().unwrap().get(7..).unwrap();
-    HttpResponse::Ok().json(serde_json::from_str::<serde_json::Value>(&String::from_utf8(BASE64.decode(cookie.as_bytes()).unwrap()).unwrap()).unwrap())
+async fn decode_cookie(cookies: CookieRecipe) -> HttpResponse {
+    HttpResponse::Ok().json(cookies)
+}
+
+#[get("/7/bake")]
+async fn bake_cookies(cookies: CookieRecipe) -> HttpResponse {
+    let input = cookies.0.as_object().unwrap();
+    let recipe = input["recipe"].as_object().unwrap();
+    let pantry = input["pantry"].as_object().unwrap();
+    let mut n_cookies = f64::INFINITY;
+    
+    for (ingredient, required_quantity) in recipe {
+        if let Some(available_quantity) = pantry.get(ingredient) {
+            let required_quantity = required_quantity.as_f64().unwrap();
+            let available_quantity = available_quantity.as_f64().unwrap();
+            
+            let quotient = available_quantity / required_quantity;
+            n_cookies = n_cookies.min(quotient);
+        } else {
+            n_cookies = 0.0;
+            break
+        }
+    }
+
+    let mut mut_input = input.clone();
+    let pantry = mut_input["pantry"].as_object_mut().unwrap();
+    if n_cookies > 0.0 {
+        pantry.iter_mut()
+                .for_each(|(k, v)| 
+                    *v = serde_json::Value::from(v.as_i64().unwrap() - n_cookies as i64 * recipe[k].as_i64().unwrap())
+                );
+    }
+    
+    HttpResponse::Ok().json(json!({
+        "cookies": n_cookies as i64,
+        "pantry": pantry,
+    }))
 }
