@@ -97,7 +97,7 @@ impl Serialize for ReindeerContestSummary {
 #[post("/4/contest")]
 async fn winner_summaries(reindeers: web::Json<Vec<Reindeer>>) -> HttpResponse {
     let summary = ReindeerContestSummary{
-        fastest: reindeers.iter().max_by_key(|r| r.speed.unwrap().to_bits()).cloned(),
+        fastest: reindeers.iter().max_by(|a, b| a.speed.unwrap().total_cmp(&b.speed.unwrap())).cloned(),
         tallest: reindeers.iter().max_by_key(|r| r.height).cloned(),
         magician: reindeers.iter().max_by_key(|r| r.snow_magic_power).cloned(),
         consumer: reindeers.iter().max_by_key(|r| r.strength).cloned(),
