@@ -126,6 +126,5 @@ struct CookieRecipe(Value);
 #[get("/7/decode")]
 async fn decode_cookie(req: HttpRequest) -> HttpResponse {
     let cookie = req.headers().get("Cookie").unwrap().to_str().unwrap().get(7..).unwrap();
-    println!("{:?}", cookie);
-    HttpResponse::Ok().json(String::from_utf8(BASE64.decode(cookie.as_bytes()).unwrap()).unwrap())
+    HttpResponse::Ok().json(serde_json::from_str::<serde_json::Value>(&String::from_utf8(BASE64.decode(cookie.as_bytes()).unwrap()).unwrap()).unwrap())
 }
