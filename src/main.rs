@@ -1,5 +1,5 @@
 use actix_web::{get, post, web, web::ServiceConfig,  HttpRequest, HttpResponse, Result, FromRequest};
-use core::{day1, day2, day2::IntoReindeerContestSummary};
+use core::{day1, day4, day4::IntoReindeerContestSummary};
 use shuttle_actix_web::ShuttleActixWeb;
 
 #[shuttle_runtime::main]
@@ -33,12 +33,12 @@ async fn cubebits(path: web::Path<String>) -> HttpResponse {
 }
 
 #[post("/4/strength")]
-async fn strength_sum(reindeers: web::Json<Vec<day2::Reindeer>>) -> HttpResponse {
-    HttpResponse::Ok().body(day2::strength_sum(reindeers.into_inner()).to_string())
+async fn strength_sum(reindeers: web::Json<Vec<day4::Reindeer>>) -> HttpResponse {
+    HttpResponse::Ok().body(day4::strength_sum(reindeers.into_inner()).to_string())
 }
 
 #[post("/4/contest")]
-async fn winner_summaries(reindeers: web::Json<Vec<day2::Reindeer>>) -> HttpResponse {
+async fn winner_summaries(reindeers: web::Json<Vec<day4::Reindeer>>) -> HttpResponse {
     HttpResponse::Ok().json(reindeers.into_inner().contest())
 }
 
