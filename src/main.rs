@@ -11,7 +11,7 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
         .service(strength_sum).service(winner_summaries)
         .service(elf_count)
         .service(decode_cookie).service(bake_cookies)
-        .service(pokemon_weight);
+        .service(pokemon_weight).service(pokemon_drop);
     };
 
     Ok(config.into())
@@ -177,7 +177,7 @@ async fn bake_cookies(cookies: CookieRecipe) -> HttpResponse {
 
 #[derive(Deserialize)]
 struct Pokemon {
-    weight: u32
+    weight: f64
 }
 
 #[get("/8/weight/{poke_num}")]
@@ -187,5 +187,18 @@ async fn pokemon_weight(pokemon_id: web::Path<u32>) -> HttpResponse {
         .json::<Pokemon>()
         .await.unwrap();
 
-    HttpResponse::Ok().body(format!("{}",  pokemon.weight / 10))
+    HttpResponse::Ok().body(format!("{}",  pokemon.weight / 10.0))
+}
+
+const GRAVITATIONAL_CONSTANT: f64 = 9.825;
+
+#[get("/8/drop/{poke_num}")]
+async fn pokemon_drop(pokemon_id: web::Path<u32>) -> HttpResponse {
+    let pokemon = reqwest::get(format!("https://pokeapi.co/api/v2/pokemon/{}", pokemon_id))
+        .await.unwrap()
+        .json::<Pokemon>()
+        .await.unwrap();
+    println!("Pokemon weight from API: {}", &pokemon.weight);
+
+    HttpResponse::Ok().body(format!("{}",  (pokemon.weight / 10f64) * (20.0 * GRAVITATIONAL_CONSTANT).sqrt()))
 }
