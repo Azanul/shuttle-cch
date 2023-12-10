@@ -1,5 +1,5 @@
 use actix_web::{get, post, web, web::ServiceConfig,  HttpRequest, HttpResponse, Result, FromRequest};
-
+use core::{day1, day2, day2::IntoReindeerContestSummary};
 use shuttle_actix_web::ShuttleActixWeb;
 
 #[shuttle_runtime::main]
@@ -29,83 +29,20 @@ async fn error() -> HttpResponse {
 
 #[get(r"/1{num1220:(\/(\d)+)+}")]
 async fn cubebits(path: web::Path<String>) -> HttpResponse {
-    let num1220 = path.into_inner();
-    let num = num1220.split('/')
-                            .map(|x| match x.parse::<u32>() {
-                                Ok(x) => x,
-                                Err(_) => 0
-                            })
-                            .fold(0, |xor, x| xor ^ x);
-    HttpResponse::Ok().body(num.pow(3).to_string())
-}
-
-
-use serde::{Serialize, Deserialize, Serializer, ser::SerializeStruct};
-
-#[derive(Clone, Serialize, Deserialize)]
-struct Reindeer {
-    name: String,
-    strength: u32,
-    speed: Option<f32>,
-    height: Option<u32>,
-    antler_width: Option<u32>,
-    snow_magic_power: Option<u32>,
-    favorite_food: Option<String>,
-    #[serde(rename = "cAnD13s_3ATeN-yesT3rdAy")]
-    candies_eaten_yesterday: Option<u32>,
+    HttpResponse::Ok().body(day1::cubebits(path.into_inner()).to_string())
 }
 
 #[post("/4/strength")]
-async fn strength_sum(reindeers: web::Json<Vec<Reindeer>>) -> HttpResponse {
-    HttpResponse::Ok().body(reindeers.iter().map(|x| x.strength).sum::<u32>().to_string())
-}
-
-struct ReindeerContestSummary {
-    fastest: Option<Reindeer>,
-    tallest: Option<Reindeer>,
-    magician: Option<Reindeer>,
-    consumer: Option<Reindeer>,
-}
-
-impl Serialize for ReindeerContestSummary {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut state = serializer.serialize_struct("ReindeerContestSummary", 4)?;
-
-        if let Some(fastest) = &self.fastest {
-            state.serialize_field("fastest", &format!("Speeding past the finish line with a strength of {} is {}", fastest.strength, fastest.name))?;
-        }
-
-        if let Some(tallest) = &self.tallest {
-            state.serialize_field("tallest", &format!("{} is standing tall with his {} cm wide antlers", tallest.name, tallest.antler_width.unwrap()))?;
-        }
-
-        if let Some(magician) = &self.magician {
-            state.serialize_field("magician", &format!("{} could blast you away with a snow magic power of {}", magician.name, magician.snow_magic_power.unwrap()))?;
-        }
-
-        if let Some(consumer) = &self.consumer {
-            state.serialize_field("consumer", &format!("{} ate lots of candies, but also some {}", consumer.name, consumer.favorite_food.as_ref().unwrap()))?;
-        }
-
-        state.end()
-    }
+async fn strength_sum(reindeers: web::Json<Vec<day2::Reindeer>>) -> HttpResponse {
+    HttpResponse::Ok().body(day2::strength_sum(reindeers.into_inner()).to_string())
 }
 
 #[post("/4/contest")]
-async fn winner_summaries(reindeers: web::Json<Vec<Reindeer>>) -> HttpResponse {
-    let summary = ReindeerContestSummary{
-        fastest: reindeers.iter().max_by(|a, b| a.speed.unwrap().total_cmp(&b.speed.unwrap())).cloned(),
-        tallest: reindeers.iter().max_by_key(|r| r.height).cloned(),
-        magician: reindeers.iter().max_by_key(|r| r.snow_magic_power).cloned(),
-        consumer: reindeers.iter().max_by_key(|r| r.candies_eaten_yesterday).cloned(),
-    };
-
-    HttpResponse::Ok().json(summary)
+async fn winner_summaries(reindeers: web::Json<Vec<day2::Reindeer>>) -> HttpResponse {
+    HttpResponse::Ok().json(reindeers.into_inner().contest())
 }
 
+use serde::{Serialize, Deserialize};
 use serde_json::json;
 
 #[post("/6")]
