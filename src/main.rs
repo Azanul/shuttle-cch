@@ -1,5 +1,5 @@
 use actix_web::{get, post, web, web::ServiceConfig,  HttpRequest, HttpResponse, Result, FromRequest};
-use core::{day1, day4, day4::IntoReindeerContestSummary};
+use core::{day1, day4, day4::IntoReindeerContestSummary, day6};
 use shuttle_actix_web::ShuttleActixWeb;
 
 #[shuttle_runtime::main]
@@ -47,12 +47,7 @@ use serde_json::json;
 
 #[post("/6")]
 async fn elf_count(input_str:String) -> HttpResponse {
-    let n_elves_on_shelves = input_str.matches("elf on a shelf").count();
-    HttpResponse::Ok().json(json!({
-        "elf": input_str.matches("elf").count(),
-        "elf on a shelf": n_elves_on_shelves,
-        "shelf with no elf on it": input_str.matches("shelf").count() - n_elves_on_shelves
-    }))
+    HttpResponse::Ok().json(json!(day6::elf_counter(input_str)))
 }
 
 use data_encoding::BASE64;
