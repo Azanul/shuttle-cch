@@ -1,5 +1,6 @@
 use actix_web::{get, post, web, web::ServiceConfig,  HttpRequest, HttpResponse, Result, FromRequest};
-use core::{day1, day4, day4::IntoReindeerContestSummary, day6, day7};
+use actix_utils::future::{ok, Ready};
+use core::{day1, day4, day4::IntoReindeerContestSummary, day6, day7, day8};
 use shuttle_actix_web::ShuttleActixWeb;
 
 #[shuttle_runtime::main]
@@ -42,15 +43,13 @@ async fn winner_summaries(reindeers: web::Json<Vec<day4::Reindeer>>) -> HttpResp
     HttpResponse::Ok().json(reindeers.into_inner().contest())
 }
 
-use serde::{Serialize, Deserialize};
-
 #[post("/6")]
 async fn elf_count(input_str:String) -> HttpResponse {
     HttpResponse::Ok().json(day6::elf_counter(input_str))
 }
 
+use serde::Serialize;
 use serde_json::Value;
-use actix_utils::future::{ok, Ready};
 
 #[derive(Debug, Serialize)]
 struct CookieRecipe(Value);
@@ -75,30 +74,12 @@ async fn bake_cookies(cookies: CookieRecipe) -> HttpResponse {
     HttpResponse::Ok().json(day7::bake_cookies(cookies.0))
 }
 
-#[derive(Deserialize)]
-struct Pokemon {
-    weight: f64
-}
-
 #[get("/8/weight/{poke_num}")]
 async fn pokemon_weight(pokemon_id: web::Path<u32>) -> HttpResponse {
-    let pokemon = reqwest::get(format!("https://pokeapi.co/api/v2/pokemon/{}", pokemon_id))
-        .await.unwrap()
-        .json::<Pokemon>()
-        .await.unwrap();
-
-    HttpResponse::Ok().body(format!("{}",  pokemon.weight / 10.0))
+    HttpResponse::Ok().body(format!("{}",  day8::pokemon_weight(pokemon_id.into_inner()).await))
 }
-
-const GRAVITATIONAL_CONSTANT: f64 = 9.825;
 
 #[get("/8/drop/{poke_num}")]
 async fn pokemon_drop(pokemon_id: web::Path<u32>) -> HttpResponse {
-    let pokemon = reqwest::get(format!("https://pokeapi.co/api/v2/pokemon/{}", pokemon_id))
-        .await.unwrap()
-        .json::<Pokemon>()
-        .await.unwrap();
-    println!("Pokemon weight from API: {}", &pokemon.weight);
-
-    HttpResponse::Ok().body(format!("{}",  (pokemon.weight / 10f64) * (20.0 * GRAVITATIONAL_CONSTANT).sqrt()))
+    HttpResponse::Ok().body(format!("{}", day8::pokemon_drop_momentum(pokemon_id.into_inner(), 10f64).await))
 }
