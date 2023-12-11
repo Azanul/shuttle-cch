@@ -1,5 +1,5 @@
 use actix_web::{get, post, web, web::ServiceConfig,  HttpRequest, HttpResponse, Result, FromRequest};
-use core::{day1, day4, day4::IntoReindeerContestSummary, day6};
+use core::{day1, day4, day4::IntoReindeerContestSummary, day6, day7};
 use shuttle_actix_web::ShuttleActixWeb;
 
 #[shuttle_runtime::main]
@@ -50,7 +50,6 @@ async fn elf_count(input_str:String) -> HttpResponse {
     HttpResponse::Ok().json(json!(day6::elf_counter(input_str)))
 }
 
-use data_encoding::BASE64;
 use serde_json::Value;
 use actix_utils::future::{ok, Ready};
 
@@ -63,7 +62,7 @@ impl FromRequest for CookieRecipe {
 
     fn from_request(req: &HttpRequest, _: &mut actix_web::dev::Payload) -> Self::Future {
         let cookie = req.headers().get("Cookie").unwrap().to_str().unwrap().get(7..).unwrap();
-        ok(CookieRecipe(serde_json::from_str::<serde_json::Value>(&String::from_utf8(BASE64.decode(cookie.as_bytes()).unwrap()).unwrap()).unwrap()))
+        ok(CookieRecipe(serde_json::from_str::<serde_json::Value>(&String::from_utf8(day7::decode_base64(cookie)).unwrap()).unwrap()))
     }
 }
 
@@ -74,37 +73,7 @@ async fn decode_cookie(cookies: CookieRecipe) -> HttpResponse {
 
 #[get("/7/bake")]
 async fn bake_cookies(cookies: CookieRecipe) -> HttpResponse {
-    let input = cookies.0.as_object().unwrap();
-    let recipe = input["recipe"].as_object().unwrap();
-    let pantry = input["pantry"].as_object().unwrap();
-    let mut n_cookies = f64::INFINITY;
-    
-    for (ingredient, required_quantity) in recipe {
-        if let Some(available_quantity) = pantry.get(ingredient) {
-            let required_quantity = required_quantity.as_f64().unwrap();
-            let available_quantity = available_quantity.as_f64().unwrap();
-            
-            let quotient = available_quantity / required_quantity;
-            n_cookies = n_cookies.min(quotient);
-        } else {
-            n_cookies = 0.0;
-            break
-        }
-    }
-
-    let mut mut_input = input.clone();
-    let pantry = mut_input["pantry"].as_object_mut().unwrap();
-    if n_cookies > 0.0 {
-        pantry.iter_mut()
-                .for_each(|(k, v)| 
-                    *v = serde_json::Value::from(v.as_i64().unwrap() - n_cookies as i64 * recipe[k].as_i64().unwrap())
-                );
-    }
-    
-    HttpResponse::Ok().json(json!({
-        "cookies": n_cookies as i64,
-        "pantry": pantry,
-    }))
+    HttpResponse::Ok().json(day7::bake_cookies(cookies.0))
 }
 
 #[derive(Deserialize)]
