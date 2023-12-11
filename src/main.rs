@@ -43,11 +43,10 @@ async fn winner_summaries(reindeers: web::Json<Vec<day4::Reindeer>>) -> HttpResp
 }
 
 use serde::{Serialize, Deserialize};
-use serde_json::json;
 
 #[post("/6")]
 async fn elf_count(input_str:String) -> HttpResponse {
-    HttpResponse::Ok().json(json!(day6::elf_counter(input_str)))
+    HttpResponse::Ok().json(day6::elf_counter(input_str))
 }
 
 use serde_json::Value;
