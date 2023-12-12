@@ -12,10 +12,10 @@ pub fn bake_cookies(input_value: Value) -> Value {
     let mut n_cookies = f64::INFINITY;
     
     for (ingredient, required_quantity) in recipe {
+        let required_quantity = required_quantity.as_f64().unwrap();
+        if required_quantity == 0.0  { continue }
         if let Some(available_quantity) = pantry.get(ingredient) {
-            let required_quantity = required_quantity.as_f64().unwrap();
             let available_quantity = available_quantity.as_f64().unwrap();
-            
             let quotient = available_quantity / required_quantity;
             n_cookies = n_cookies.min(quotient);
         } else {
@@ -29,7 +29,10 @@ pub fn bake_cookies(input_value: Value) -> Value {
     if n_cookies > 0.0 {
         pantry.iter_mut()
             .for_each(|(k, v)| 
-                *v = serde_json::Value::from(v.as_i64().unwrap() - n_cookies as i64 * recipe[k].as_i64().unwrap())
+                *v = serde_json::Value::from(v.as_i64().unwrap() - n_cookies as i64 * match recipe.get(k) {
+                    Some(v) => v.as_i64().unwrap(),
+                    None => 0,
+                })
             );
     }
 
