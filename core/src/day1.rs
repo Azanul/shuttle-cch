@@ -1,9 +1,6 @@
-pub fn cubebits(num1220: String) -> u64 {
+pub fn cubebits(num1220: String) -> i64 {
     num1220.split('/')
-            .map(|x| match x.parse::<u64>() {
-                    Ok(x) => x,
-                    Err(_) => 0
-                })
+            .map(|x| x.parse::<i64>().unwrap_or_default())
             .fold(0, |xor, x| xor ^ x)
             .pow(3)
 }
