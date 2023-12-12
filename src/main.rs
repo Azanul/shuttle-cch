@@ -1,6 +1,10 @@
-use actix_web::{get, post, web, web::ServiceConfig,  HttpRequest, HttpResponse, Result, FromRequest};
+use actix_web::{get, post, web, web::ServiceConfig,  HttpRequest, HttpResponse, Result, FromRequest, Responder};
+use actix_files::NamedFile;
+use actix_multipart::form::{tempfile::TempFile, MultipartForm};
+use image::{GenericImageView, Rgba};
 use actix_utils::future::{ok, Ready};
 use core::{day1, day4, day4::IntoReindeerContestSummary, day6, day7, day8};
+use std::io::BufReader;
 use shuttle_actix_web::ShuttleActixWeb;
 
 #[shuttle_runtime::main]
@@ -12,7 +16,8 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
         .service(strength_sum).service(winner_summaries)
         .service(elf_count)
         .service(decode_cookie).service(bake_cookies)
-        .service(pokemon_weight).service(pokemon_drop);
+        .service(pokemon_weight).service(pokemon_drop)
+        .service(serve_image).service(magical_pixels_count);
     };
 
     Ok(config.into())
@@ -82,4 +87,27 @@ async fn pokemon_weight(pokemon_id: web::Path<u32>) -> HttpResponse {
 #[get("/8/drop/{poke_num}")]
 async fn pokemon_drop(pokemon_id: web::Path<u32>) -> HttpResponse {
     HttpResponse::Ok().body(format!("{}", day8::pokemon_drop_momentum(pokemon_id.into_inner(), 10f64).await))
+}
+
+#[get("/11/assets/{file_name}")]
+async fn serve_image(file_name: web::Path<String>) -> impl Responder {
+    NamedFile::open(format!("assets/{}", file_name))
+}
+
+#[derive(Debug, MultipartForm)]
+struct UploadForm {
+    #[multipart(rename = "image")]
+    image: TempFile,
+}
+
+#[post("/11/red_pixels")]
+async fn magical_pixels_count(MultipartForm(form): MultipartForm<UploadForm>) -> HttpResponse {
+    let image = image::load(BufReader::new(&form.image.file), image::ImageFormat::Png).unwrap();
+
+    let mut count = 0;
+    for (_, _, Rgba([r, g, b, _])) in image.pixels() {
+        if r > b + g { count += 1 }
+    }
+
+    HttpResponse::Ok().body(count.to_string())
 }
