@@ -33,7 +33,7 @@ async fn error() -> HttpResponse {
     HttpResponse::InternalServerError().finish()
 }
 
-#[get(r"/1{num1220:(\/(\d)+)+}")]
+#[get(r"/1{num1220:(\/(-?\d)+)+}")]
 async fn cubebits(path: web::Path<String>) -> HttpResponse {
     HttpResponse::Ok().body(day1::cubebits(path.into_inner()).to_string())
 }
