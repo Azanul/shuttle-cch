@@ -106,7 +106,7 @@ async fn magical_pixels_count(MultipartForm(form): MultipartForm<UploadForm>) ->
 
     let mut count = 0;
     for (_, _, Rgba([r, g, b, _])) in image.pixels() {
-        if r > b + g { count += 1 }
+        if r > b.saturating_sub(g) { count += 1 }
     }
 
     HttpResponse::Ok().body(count.to_string())
