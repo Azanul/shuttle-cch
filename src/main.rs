@@ -1,23 +1,30 @@
-use actix_web::{get, post, web, web::ServiceConfig,  HttpRequest, HttpResponse, Result, FromRequest, Responder};
+use actix_web::{get, post, web, web::ServiceConfig,  HttpRequest, HttpResponse, Result, FromRequest, Responder, cookie::time::Instant};
 use actix_files::NamedFile;
 use actix_multipart::form::{tempfile::TempFile, MultipartForm};
 use image::{GenericImageView, Rgba};
 use actix_utils::future::{ok, Ready};
 use core::{day1, day4, day4::IntoReindeerContestSummary, day6, day7, day8};
-use std::io::BufReader;
+use std::{io::BufReader, collections::HashMap};
 use shuttle_actix_web::ShuttleActixWeb;
+use std::sync::Mutex;
 
 #[shuttle_runtime::main]
 async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static> {
+    let app_state = web::Data::new(AppState {
+        stopwatch: Mutex::new(HashMap::new()),
+    });
+
     let config = move |cfg: &mut ServiceConfig| {
         cfg
+        .app_data(app_state.clone())
         .service(index).service(error)
         .service(cubebits)
         .service(strength_sum).service(winner_summaries)
         .service(elf_count)
         .service(decode_cookie).service(bake_cookies)
         .service(pokemon_weight).service(pokemon_drop)
-        .service(serve_image).service(magical_pixels_count);
+        .service(serve_image).service(magical_pixels_count)
+        .service(save_id).service(load_id);
     };
 
     Ok(config.into())
@@ -110,4 +117,23 @@ async fn magical_pixels_count(MultipartForm(form): MultipartForm<UploadForm>) ->
     }
 
     HttpResponse::Ok().body(count.to_string())
+}
+
+struct AppState {
+    stopwatch: Mutex<HashMap<String, Instant>>,
+}
+
+#[post("/12/save/{id}")]
+async fn save_id(id: web::Path<String>, state: web::Data<AppState>) -> impl Responder {
+    let id = id.into_inner();
+    let mut stopwatch = state.stopwatch.lock().unwrap();
+    stopwatch.insert(id, Instant::now());
+    HttpResponse::Ok()
+}
+
+#[get("/12/load/{id}")]
+async fn load_id(id: web::Path<String>, state: web::Data<AppState>) -> impl Responder {
+    let id = id.into_inner();
+    let stopwatch = state.stopwatch.lock().unwrap();
+    HttpResponse::Ok().body(format!("{}", Instant::elapsed(*stopwatch.get(&id).unwrap()).whole_seconds()))
 }
