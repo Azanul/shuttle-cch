@@ -24,7 +24,7 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
         .service(decode_cookie).service(bake_cookies)
         .service(pokemon_weight).service(pokemon_drop)
         .service(serve_image).service(magical_pixels_count)
-        .service(save_id).service(load_id);
+        .service(save_id).service(load_id).service(ulids_to_uuids);
     };
 
     Ok(config.into())
@@ -136,4 +136,18 @@ async fn load_id(id: web::Path<String>, state: web::Data<AppState>) -> impl Resp
     let id = id.into_inner();
     let stopwatch = state.stopwatch.lock().unwrap();
     HttpResponse::Ok().body(format!("{}", Instant::elapsed(*stopwatch.get(&id).unwrap()).whole_seconds()))
+}
+
+use ulid::Ulid;
+use uuid::Uuid;
+
+#[post("/12/ulids")]
+async fn ulids_to_uuids(data: web::Json<Vec<String>>) -> impl Responder {
+    let uuids: Vec<Uuid> = data
+        .iter().rev()
+        .filter_map(|ulid_str| Ulid::from_string(ulid_str).ok())
+        .map(|ulid| Uuid::from_bytes(ulid.to_bytes()))
+        .collect();
+
+    HttpResponse::Ok().json(uuids)
 }
