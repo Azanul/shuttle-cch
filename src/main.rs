@@ -1,10 +1,11 @@
-use actix_web::{get, post, web, web::ServiceConfig,  HttpRequest, HttpResponse, Result, FromRequest, Responder, cookie::time::Instant};
+use actix_web::{get, post, web, web::ServiceConfig,  HttpRequest, HttpResponse, Result, FromRequest, Responder};
 use actix_files::NamedFile;
 use actix_multipart::form::{tempfile::TempFile, MultipartForm};
+use chrono::{Utc, DateTime, Datelike};
 use image::{GenericImageView, Rgba};
 use actix_utils::future::{ok, Ready};
 use core::{day1, day4, day4::IntoReindeerContestSummary, day6, day7, day8};
-use std::{io::BufReader, collections::HashMap};
+use std::{io::BufReader, collections::HashMap, time::SystemTime};
 use shuttle_actix_web::ShuttleActixWeb;
 use std::sync::Mutex;
 
@@ -24,7 +25,7 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
         .service(decode_cookie).service(bake_cookies)
         .service(pokemon_weight).service(pokemon_drop)
         .service(serve_image).service(magical_pixels_count)
-        .service(save_id).service(load_id).service(ulids_to_uuids);
+        .service(save_id).service(load_id).service(ulids_to_uuids).service(decode_ulids);
     };
 
     Ok(config.into())
@@ -61,7 +62,7 @@ async fn elf_count(input_str:String) -> HttpResponse {
 }
 
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{Value, json};
 
 #[derive(Debug, Serialize)]
 struct CookieRecipe(Value);
@@ -120,14 +121,14 @@ async fn magical_pixels_count(MultipartForm(form): MultipartForm<UploadForm>) ->
 }
 
 struct AppState {
-    stopwatch: Mutex<HashMap<String, Instant>>,
+    stopwatch: Mutex<HashMap<String, SystemTime>>,
 }
 
 #[post("/12/save/{id}")]
 async fn save_id(id: web::Path<String>, state: web::Data<AppState>) -> impl Responder {
     let id = id.into_inner();
     let mut stopwatch = state.stopwatch.lock().unwrap();
-    stopwatch.insert(id, Instant::now());
+    stopwatch.insert(id, SystemTime::now());
     HttpResponse::Ok()
 }
 
@@ -135,7 +136,7 @@ async fn save_id(id: web::Path<String>, state: web::Data<AppState>) -> impl Resp
 async fn load_id(id: web::Path<String>, state: web::Data<AppState>) -> impl Responder {
     let id = id.into_inner();
     let stopwatch = state.stopwatch.lock().unwrap();
-    HttpResponse::Ok().body(format!("{}", Instant::elapsed(*stopwatch.get(&id).unwrap()).whole_seconds()))
+    HttpResponse::Ok().body(format!("{}", SystemTime::from(*stopwatch.get(&id).unwrap()).elapsed().unwrap().as_secs()))
 }
 
 use ulid::Ulid;
@@ -150,4 +151,27 @@ async fn ulids_to_uuids(data: web::Json<Vec<String>>) -> impl Responder {
         .collect();
 
     HttpResponse::Ok().json(uuids)
+}
+
+#[post("/12/ulids/{weekday}")]
+async fn decode_ulids(day: web::Path<u32>, data: web::Json<Vec<String>>) -> impl Responder {
+    let day = day.into_inner();
+    let ulids = data
+        .iter()
+        .map(|ulid_str| Ulid::from_string(ulid_str).unwrap());
+    let dts = ulids.clone()
+        .map(|x| Ulid::datetime(&x))
+        .map(DateTime::<Utc>::from);
+
+    let christmas = dts.clone().filter(|d| d.month() == 12 && d.day() == 24).count();
+    let weekday = dts.clone().filter(|d| d.weekday().num_days_from_monday() == day).count();
+    let in_the_future = dts.filter(|x| x.gt(&Utc::now())).count();
+    let lsb = ulids.filter(|u| u.0 & 1 == 1).count();
+
+    HttpResponse::Ok().json(json!({
+        "christmas eve": christmas,
+        "weekday": weekday,
+        "in the future": in_the_future,
+        "LSB is 1": lsb
+      }))
 }
