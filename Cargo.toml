@@ -17,3 +17,5 @@ core = { path = "core" }
 ulid = "1.1.0"
 uuid = "1.6.1"
 chrono = { version = "0.4.31", features = ["clock", "serde"] }
+shuttle-shared-db = { version = "0.35.0", features = ["postgres"] }
+sqlx = { version = "0.7.3", features = ["postgres"] }

@@ -8,11 +8,15 @@ use core::{day1, day4, day4::IntoReindeerContestSummary, day6, day7, day8};
 use std::{io::BufReader, collections::HashMap, time::SystemTime};
 use shuttle_actix_web::ShuttleActixWeb;
 use std::sync::Mutex;
+use sqlx::{PgPool, Row};
 
 #[shuttle_runtime::main]
-async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static> {
+async fn main(
+        #[shuttle_shared_db::Postgres] pool: PgPool,
+) -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static> {
     let app_state = web::Data::new(AppState {
         stopwatch: Mutex::new(HashMap::new()),
+        pool,
     });
 
     let config = move |cfg: &mut ServiceConfig| {
@@ -25,7 +29,8 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
         .service(decode_cookie).service(bake_cookies)
         .service(pokemon_weight).service(pokemon_drop)
         .service(serve_image).service(magical_pixels_count)
-        .service(save_id).service(load_id).service(ulids_to_uuids).service(decode_ulids);
+        .service(save_id).service(load_id).service(ulids_to_uuids).service(decode_ulids)
+        .service(squeel);
     };
 
     Ok(config.into())
@@ -122,6 +127,7 @@ async fn magical_pixels_count(MultipartForm(form): MultipartForm<UploadForm>) ->
 
 struct AppState {
     stopwatch: Mutex<HashMap<String, SystemTime>>,
+    pool: PgPool,
 }
 
 #[post("/12/save/{id}")]
@@ -174,4 +180,10 @@ async fn decode_ulids(day: web::Path<u32>, data: web::Json<Vec<String>>) -> impl
         "in the future": in_the_future,
         "LSB is 1": lsb
       }))
+}
+
+#[get("/13/sql")]
+async fn squeel(state: web::Data<AppState>) -> impl Responder {
+    let res = sqlx::query("SELECT 20231213 number").fetch_one(&state.pool).await.unwrap();
+    HttpResponse::Ok().body(format!("{}", res.get::<i32, _>("number")))
 }
